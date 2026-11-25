@@ -7,6 +7,7 @@ import re
 import os
 import shutil
 import sys
+import atexit
 from datetime import datetime
 
 from rapidocr_onnxruntime import RapidOCR
@@ -36,6 +37,8 @@ CENTER_TARGETS = {"领取奖励", "继续观看", "继续互动"}
 OCR_MAX_WIDTH = 720
 # 每次点击保存标注截图，方便排查误点
 SAVE_CLICK_DEBUG = True
+# 脚本退出时是否清理 debug_clicks 里的截图
+CLEAR_DEBUG_ON_EXIT = True
 # adb.exe 路径；留空则自动查找（脚本目录 / PATH / ANDROID_HOME）
 ADB_PATH = ""
 # 达到 30 天领取上限后是否停止脚本
@@ -216,6 +219,26 @@ def save_click_debug(screen, x, y, target, text, score, seq, ts):
     return path
 
 
+def cleanup_debug_images():
+    """脚本退出时清理本次生成的调试截图"""
+    if not CLEAR_DEBUG_ON_EXIT or not os.path.isdir(DEBUG_DIR):
+        return
+    removed = 0
+    for name in os.listdir(DEBUG_DIR):
+        if not name.lower().endswith(".png"):
+            continue
+        try:
+            os.remove(os.path.join(DEBUG_DIR, name))
+            removed += 1
+        except OSError as e:
+            print(f"[警告] 清理截图失败 {name}: {e}")
+    if removed:
+        print(f"[清理] 已删除 {removed} 张调试截图")
+
+
+atexit.register(cleanup_debug_images)
+
+
 def log_click(screen, target, text, score, x, y, candidates):
     """点击时打醒目日志 + 存调试图"""
     global click_seq
@@ -341,6 +364,7 @@ print(f"   目标: {TARGETS}  置信度>={OCR_SCORE}  轮询={POLL_INTERVAL}s")
 print(f"   点击调试图目录: {DEBUG_DIR}")
 print(f"   无冷却目标: {sorted(NO_COOLDOWN_TARGETS)}")
 print(f"   领取达上限: {'停止脚本' if STOP_WHEN_LIMIT_REACHED else '继续运行'}")
+print(f"   退出清理截图: {'开启' if CLEAR_DEBUG_ON_EXIT else '关闭'}")
 
 if not resolve_adb():
     print("❌ 未找到 adb.exe：请把 adb.exe 放到脚本目录，或修改脚本顶部的 ADB_PATH，")

@@ -18,7 +18,8 @@
 6. **adb 自动查找**：自动从脚本目录、系统 PATH、Android SDK 环境变量中查找 `adb.exe`。
 7. **截图兼容处理**：自动跳过部分 adb 在截图前打印的警告文本，避免截图解码失败。
 8. **点击调试截图**：每次点击都会在 `debug_clicks/` 目录保存带标记的图片，方便排查误点。
-9. **领取上限自动停止**：识别到「已领满30天」「领取上限」等完成态文案后自动停止，不再空转截图识别。
+9. **领取上限自动停止**：识别到「第30日畅听」「领取上限」等完成态文案后自动停止，不再空转截图识别。
+10. **退出自动清理截图**：脚本退出时自动删除 `debug_clicks/` 里本次生成的 PNG 截图，不留垃圾文件。
 
 ---
 
@@ -29,7 +30,7 @@ qishui-auto/
 ├─ qishui_auto.py        # 主程序
 ├─ 启动.bat              # Windows 一键启动
 ├─ requirements.txt      # Python 依赖
-└─ debug_clicks/         # 运行后自动生成，保存点击调试截图
+└─ debug_clicks/         # 运行后自动生成，保存点击调试截图（退出时自动清理 PNG）
 ```
 
 ---
@@ -101,6 +102,7 @@ qishui-auto/
    ```text
    🚀 汽水音乐自动看广告脚本启动（OCR 文字识别）
    领取达上限: 停止脚本
+   退出清理截图: 开启
    ✅ 使用 adb: D:\Desktop\py_project\qishui-auto\adb.exe
    ⏳ 加载 OCR 模型...
    ✅ OCR 就绪
@@ -180,6 +182,7 @@ Ctrl + C
 | `CENTER_TARGETS` | 需要靠近屏幕中央排序的目标 |
 | `ENABLE_RANDOM_SWIPE` | 未命中时是否随机上滑，默认关闭 |
 | `SAVE_CLICK_DEBUG` | 是否保存点击调试截图，默认开启 |
+| `CLEAR_DEBUG_ON_EXIT` | 退出时是否清理 `debug_clicks/` 里的 PNG，默认开启 |
 | `ADB_PATH` | adb.exe 绝对路径，留空则自动查找 |
 | `STOP_WHEN_LIMIT_REACHED` | 达到 30 天上限后是否停止脚本，默认开启 |
 | `LIMIT_KEYWORDS` / `LIMIT_PATTERNS` | 判定「已达上限」的关键词和正则，可按实际页面调整 |
