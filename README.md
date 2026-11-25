@@ -1,6 +1,6 @@
 # 汽水音乐自动看广告脚本（优化版）
 
-本项目基于开源项目 [sw78159/qishui-auto]([https://github.com/sw78159/qishui-auto]) 进行二次开发与逻辑优化，使用 **OCR 文字识别** 定位按钮，再通过 adb 模拟点击。
+本项目基于开源项目 [sw78159/qishui-auto](https://github.com/sw78159/qishui-auto) 进行二次开发与逻辑优化，使用 **OCR 文字识别** 定位按钮，再通过 adb 模拟点击。
 
 ---
 
