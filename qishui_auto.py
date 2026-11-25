@@ -38,6 +38,20 @@ OCR_MAX_WIDTH = 720
 SAVE_CLICK_DEBUG = True
 # adb.exe 路径；留空则自动查找（脚本目录 / PATH / ANDROID_HOME）
 ADB_PATH = ""
+# 达到 30 天领取上限后是否停止脚本
+STOP_WHEN_LIMIT_REACHED = True
+# 判定「已达上限」的关键词（归一化后匹配）
+LIMIT_KEYWORDS = [
+    "领取上限", "已达上限", "已领满", "领满30天", "已满30天",
+    "30天已领", "已领取30天", "领取完毕", "奖励已领完",
+    "第30日畅听", "30日畅听",  # 汽水音乐真实完成态文案
+]
+# 判定「已达上限」的正则：必须带完成态或「畅听」，避免误伤「最高可领30天」
+LIMIT_PATTERNS = [
+    r"(已|满|上限|达到|领完).{0,6}30[天日]",
+    r"30[天日].{0,6}(已|满|完|上限|领完)",
+    r"第?30日.{0,4}(畅听|会员|VIP)",
+]
 # ===========================================
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -127,6 +141,19 @@ def normalize_text(s: str) -> str:
     s = s.replace("奨", "奖").replace("奬", "奖")
     s = s.replace("勵", "励")
     return s
+
+
+def is_limit_reached(items):
+    """返回命中上限的 OCR 原文；未命中返回 None"""
+    if not STOP_WHEN_LIMIT_REACHED:
+        return None
+    for text, score, cx, cy in items:
+        norm = normalize_text(text)
+        if any(k in norm for k in LIMIT_KEYWORDS):
+            return text
+        if any(re.search(p, norm) for p in LIMIT_PATTERNS):
+            return text
+    return None
 
 
 def text_match(recognized: str, target: str) -> bool:
@@ -254,10 +281,11 @@ def run_ocr(screen):
     return items
 
 
-def find_and_click(screen):
+def find_and_click(screen, items=None):
     """识别目标文字并点击。命中返回目标字符串，未命中返回 None"""
     sh, sw = screen.shape[:2]
-    items = run_ocr(screen)
+    if items is None:
+        items = run_ocr(screen)
 
     if not items:
         print("· OCR 无结果")
@@ -312,6 +340,7 @@ print("🚀 汽水音乐自动看广告脚本启动（OCR 文字识别）")
 print(f"   目标: {TARGETS}  置信度>={OCR_SCORE}  轮询={POLL_INTERVAL}s")
 print(f"   点击调试图目录: {DEBUG_DIR}")
 print(f"   无冷却目标: {sorted(NO_COOLDOWN_TARGETS)}")
+print(f"   领取达上限: {'停止脚本' if STOP_WHEN_LIMIT_REACHED else '继续运行'}")
 
 if not resolve_adb():
     print("❌ 未找到 adb.exe：请把 adb.exe 放到脚本目录，或修改脚本顶部的 ADB_PATH，")
@@ -328,14 +357,21 @@ while True:
             time.sleep(3)
             continue
 
+        items = run_ocr(screen)
+
+        limit_text = is_limit_reached(items)
+        if limit_text:
+            print(f"🛑 检测到已达领取上限（OCR:「{limit_text}」），脚本停止。")
+            break
+
         sh_h = screen.shape[0]
-        is_live = any(text in ["关注", "更多直播"] and cy < sh_h * 0.25 for text, score, cx, cy in run_ocr(screen))
+        is_live = any(text in ["关注", "更多直播"] and cy < sh_h * 0.25 for text, score, cx, cy in items)
         if is_live:
             print("⚡ 检测到顶部[关注/更多直播]，秒退直播间！")
             adb_command(["shell", "input", "keyevent", "4"])
             time.sleep(1.5)
             continue
-        clicked = find_and_click(screen)
+        clicked = find_and_click(screen, items)
         if clicked:
             miss_count = 0
         if clicked:
